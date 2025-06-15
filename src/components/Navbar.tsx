@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { showToast } from './Toast';
-import { LayoutDashboard, User, Settings, ScanLine } from 'lucide-react';
+import { LayoutDashboard, User, LogOut } from 'lucide-react';
 
 interface NavbarProps {
   currentPage: string;
@@ -48,8 +48,8 @@ export default function Navbar({ currentPage, onPageChange }: NavbarProps) {
     },
     { 
       id: 'settings', 
-      label: 'Settings', 
-      icon: Settings,
+      label: 'Logout', 
+      icon: LogOut,
       isImageIcon: false,
       onClick: handleSettings
     },
