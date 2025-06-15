@@ -42,10 +42,10 @@ function AppContent() {
 
   return (
     <>
-      <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
-      <main className="min-h-screen pt-16">
+      <main className="min-h-screen pb-20">
         {renderPage()}
       </main>
+      <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
       <Toast />
     </>
   );

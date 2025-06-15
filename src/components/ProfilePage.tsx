@@ -30,17 +30,16 @@ export default function ProfilePage() {
     profile: {
       bio: '',
       companyName: '',
-      email: '',
-      fullName: '',
-      jobTitle: '',
+      email: 'robert@gmail.com',
+      fullName: 'Robert Downey',
+      jobTitle: 'Project Manager',
       linkedIn: '',
-      phoneNumber: '',
+      phoneNumber: '+91 1234567890',
       website: ''
     }
   });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -54,31 +53,7 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
-      // Don't show error toast as user might not have a profile yet
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      const response = await updateUserProfile(profile);
-      if (response.success) {
-        showToast('Profile saved successfully!', 'success');
-      } else {
-        // Try creating profile if update fails
-        const createResponse = await createUserProfile(profile);
-        if (createResponse.success) {
-          showToast('Profile created successfully!', 'success');
-        }
-      }
-    } catch (error: any) {
-      showToast(error.message || 'Failed to save profile', 'error');
-    } finally {
-      setSaving(false);
+      // Using default data if no profile exists
     }
   };
 
@@ -92,242 +67,303 @@ export default function ProfilePage() {
     }));
   };
 
-  const getUserInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const handleSave = async () => {
+    try {
+      const response = await updateUserProfile(profile);
+      if (response.success) {
+        showToast('Profile updated successfully!', 'success');
+        setEditing(false);
+      } else {
+        const createResponse = await createUserProfile(profile);
+        if (createResponse.success) {
+          showToast('Profile created successfully!', 'success');
+          setEditing(false);
+        }
+      }
+    } catch (error: any) {
+      showToast(error.message || 'Failed to save profile', 'error');
+    }
   };
+
+  const ProfileIcon = () => (
+    <div className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center mx-auto">
+      <svg
+        className="w-10 h-10 text-gray-600"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+      </svg>
+    </div>
+  );
 
   if (loading) {
     return (
-      <div className="container mx-auto px-8 py-8">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="spinner mx-auto mb-4"></div>
-          <p className="text-white/80">Loading profile...</p>
+          <p className="text-gray-600">Loading profile...</p>
         </div>
       </div>
     );
   }
-  console.log("@profile", profile);
+
   return (
-    <div className="container mx-auto px-8 py-8">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-white mb-4">My Profile</h1>
-        <p className="text-xl text-white/80">Manage your business card information</p>
+      <div
+        className="text-white px-4 py-6 rounded-b-3xl"
+        style={{
+          background: 'linear-gradient(to right, #475467, #101828)'
+        }}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <button className="p-2">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h1 className="text-lg font-semibold">My Profile</h1>
+          <button
+            onClick={() => editing ? handleSave() : setEditing(true)}
+            className="p-2"
+          >
+            {editing ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Profile Section */}
+        <div className="text-center">
+          <ProfileIcon />
+          <h2 className="text-2xl font-semibold mt-4 mb-1">
+            {profile?.profile?.fullName || 'Robert Downey'}
+          </h2>
+          <p className="text-gray-300 text-base">
+            {profile?.profile?.jobTitle || 'Project Manager'}
+          </p>
+        </div>
       </div>
 
-      {/* Profile Form */}
-      <div className="max-w-4xl mx-auto">
-        <form onSubmit={handleSubmit} className="bg-white/10 backdrop-blur-sm rounded-2xl p-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="form-group">
-              <label htmlFor="fullName" className="text-white">Full Name *</label>
-              <input
-                type="text"
-                id="fullName"
-                name="fullName"
-                value={profile?.profile?.fullName}
-                onChange={handleInputChange}
-                required
-                disabled={saving}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="email" className="text-white">Email *</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={profile?.profile?.email}
-                onChange={handleInputChange}
-                required
-                disabled={saving}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="phoneNumber" className="text-white">Phone Number</label>
-              <input
-                type="tel"
-                id="phoneNumber"
-                name="phoneNumber"
-                value={profile?.profile?.phoneNumber}
-                onChange={handleInputChange}
-                disabled={saving}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="jobTitle" className="text-white">Job Title</label>
-              <input
-                type="text"
-                id="jobTitle"
-                name="jobTitle"
-                value={profile?.profile?.jobTitle}
-                onChange={handleInputChange}
-                disabled={saving}
-              />
-            </div>
-
-            <div className="form-group md:col-span-2">
-              <label htmlFor="companyName" className="text-white">Company Name</label>
-              <input
-                type="text"
-                id="companyName"
-                name="companyName"
-                value={profile?.profile?.companyName}
-                onChange={handleInputChange}
-                disabled={saving}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="linkedIn" className="text-white">LinkedIn Profile</label>
-              <input
-                type="url"
-                id="linkedIn"
-                name="linkedIn"
-                value={profile?.profile?.linkedIn}
-                onChange={handleInputChange}
-                placeholder="https://linkedin.com/in/yourprofile"
-                disabled={saving}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="website" className="text-white">Website</label>
-              <input
-                type="url"
-                id="website"
-                name="website"
-                value={profile?.profile?.website}
-                onChange={handleInputChange}
-                placeholder="https://yourwebsite.com"
-                disabled={saving}
-              />
-            </div>
-
-            <div className="form-group md:col-span-2">
-              <label htmlFor="bio" className="text-white">Bio</label>
-              <textarea
-                id="bio"
-                name="bio"
-                value={profile?.profile?.bio}
-                onChange={handleInputChange}
-                rows={3}
-                placeholder="Brief description about yourself..."
-                disabled={saving}
-              />
-            </div>
+      {/* Content */}
+      <div className="px-4 py-6 space-y-6">
+        {/* Personal Details */}
+        <div className="bg-white ">
+          <div className="px-4 py-3 bg-gray-100 rounded-t-lg">
+            <h3 className="text-lg font-semibold text-gray-800">Personal Details</h3>
           </div>
+          <div className="p-4 space-y-4 bg-gray-100">
+            <div>
+              <div className="bg-gray-100 py-2 rounded-md mb-2">
+                <label className="block text-base font-medium text-gray-700">
+                  Full name
+                </label>
+              </div>
+              {editing ? (
+                <input
+                  type="text"
+                  name="fullName"
+                  value={profile?.profile?.fullName || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-white border border-none rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <div className="bg-white px-3 py-2 rounded-md border border-white">
+                  <p className="text-gray-800">{profile?.profile?.fullName || 'Robert Downey'}</p>
+                </div>
+              )}
+            </div>
 
-          <div className="flex gap-4 mt-8">
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={saving}
-            >
-              {saving ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
+            <div>
+              <div className="bg-gray-100 py-2 rounded-md mb-2">
+                <label className="block text-base font-medium text-gray-700">
+                  Email ID
+                </label>
+              </div>
+              {editing ? (
+                <input
+                  type="email"
+                  name="email"
+                  value={profile?.profile?.email || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <div className="bg-white px-3 py-2 rounded-md border border-none">
+                  <p className="text-gray-800">{profile?.profile?.email || 'robert@gmail.com'}</p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="bg-gray-100 py-2 rounded-md mb-2">
+                <label className="block text-base font-medium text-gray-700">
+                  Phone Number
+                </label>
+              </div>
+              {editing ? (
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 py-2 border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-l-md">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={profile?.profile?.phoneNumber?.replace('+91 ', '') || ''}
+                    onChange={(e) => handleInputChange({
+                      ...e,
+                      target: {
+                        ...e.target,
+                        value: '+91 ' + e.target.value
+                      }
+                    } as React.ChangeEvent<HTMLInputElement>)}
+                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="1234567890"
+                  />
                 </div>
               ) : (
-                'Save Profile'
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowPreview(true)}
-              className="btn-secondary"
-              disabled={saving}
-            >
-              Preview
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Profile Preview Modal */}
-      {showPreview && (
-        <div className="modal active">
-          <div className="modal-content">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-bold">Profile Preview</h2>
-              <button
-                onClick={() => setShowPreview(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="profile-preview">
-              <div className="profile-avatar">
-                {getUserInitials(profile?.profile?.fullName)}
-              </div>
-
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 mb-1">
-                  {profile?.profile?.fullName || 'Your Name'}
-                </h3>
-                <p className="text-gray-600">
-                  {profile?.profile?.jobTitle && profile?.profile?.companyName
-                    ? `${profile?.profile?.jobTitle} at ${profile?.profile?.companyName}`
-                    : profile?.profile?.jobTitle || profile?.profile?.companyName || 'Your Title'}
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {profile?.profile?.email && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">📧</span>
-                    <span>{profile?.profile?.email}</span>
-                  </div>
-                )}
-
-                {profile?.profile?.phoneNumber && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">📞</span>
-                    <span>{profile?.profile?.phoneNumber}</span>
-                  </div>
-                )}
-
-                {profile?.profile?.website && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">🌐</span>
-                    <a href={profile?.profile?.website} className="text-indigo-600 hover:underline">
-                      {profile?.profile?.website}
-                    </a>
-                  </div>
-                )}
-
-                {profile?.profile?.linkedIn && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">💼</span>
-                    <a href={profile?.profile?.linkedIn} className="text-indigo-600 hover:underline">
-                      LinkedIn Profile
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {profile?.profile?.bio && (
-                <div className="mt-6 pt-6 border-t">
-                  <h4 className="font-semibold mb-2">About</h4>
-                  <p className="text-gray-600">{profile?.profile?.bio}</p>
+                <div className="bg-white px-3 py-2 rounded-md border border-none flex items-center">
+                  <span className="text-gray-500 mr-2">+91</span>
+                  <span className="text-gray-800">
+                    {profile?.profile?.phoneNumber?.replace('+91 ', '') || '1234567890'}
+                  </span>
                 </div>
               )}
             </div>
           </div>
         </div>
-      )}
+
+        {/* Professional Details */}
+        <div className="bg-white ">
+          <div className="px-4 py-3 bg-gray-100 rounded-t-lg">
+            <h3 className="text-lg font-semibold text-gray-800">Professional Details</h3>
+          </div>
+          <div className="p-4 space-y-4 bg-gray-100">
+            <div>
+              <div className="bg-gray-100 py-2 rounded-md mb-2">
+                <label className="block text-base font-medium text-gray-700">
+                  Job Title
+                </label>
+              </div>
+              {editing ? (
+                <input
+                  type="text"
+                  name="jobTitle"
+                  value={profile?.profile?.jobTitle || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <div className="bg-white px-3 py-2 rounded-md border border-none">
+                  <p className="text-gray-800">{profile?.profile?.jobTitle || 'Project Manager'}</p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="bg-gray-100 py-2 rounded-md mb-2">
+                <label className="block text-base font-medium text-gray-700">
+                  Company Name
+                </label>
+              </div>
+              {editing ? (
+                <input
+                  type="text"
+                  name="companyName"
+                  value={profile?.profile?.companyName || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <div className="bg-white px-3 py-2 rounded-md border border-none">
+                  <p className="text-gray-800">{profile?.profile?.companyName || 'Add company name'}</p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="bg-gray-100 py-2 rounded-md mb-2">
+                <label className="block text-base font-medium text-gray-700">
+                  LinkedIn Profile
+                </label>
+              </div>
+              {editing ? (
+                <input
+                  type="url"
+                  name="linkedIn"
+                  value={profile?.profile?.linkedIn || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://linkedin.com/in/yourprofile"
+                />
+              ) : (
+                <div className="bg-white px-3 py-2 rounded-md border border-none">
+                  <p className="text-gray-800">{profile?.profile?.linkedIn || 'Add LinkedIn profile'}</p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="bg-gray-100 py-2 rounded-md mb-2">
+                <label className="block text-base font-medium text-gray-700">
+                  Website
+                </label>
+              </div>
+              {editing ? (
+                <input
+                  type="url"
+                  name="website"
+                  value={profile?.profile?.website || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://yourwebsite.com"
+                />
+              ) : (
+                <div className="bg-white px-3 py-2 rounded-md border border-none">
+                  <p className="text-gray-800">{profile?.profile?.website || 'Add website'}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bio Section */}
+        <div className="bg-white ">
+          <div className="px-4 py-3 bg-gray-100 rounded-t-lg">
+            <h3 className="text-lg font-semibold text-gray-800">About</h3>
+          </div>
+          <div className="p-4 bg-gray-100">
+            <div>
+              <div className="bg-gray-100 py-2 rounded-md mb-2">
+                <label className="block text-base font-medium text-gray-700">
+                  Bio
+                </label>
+              </div>
+              {editing ? (
+                <textarea
+                  name="bio"
+                  value={profile?.profile?.bio || ''}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="Brief description about yourself..."
+                />
+              ) : (
+                <div className="bg-white px-3 py-2 rounded-md border border-none">
+                  <p className="text-gray-800">{profile?.profile?.bio || 'Add your bio'}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 

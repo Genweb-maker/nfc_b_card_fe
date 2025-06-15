@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { showToast } from './Toast';
+import { LayoutDashboard, User, Settings, ScanLine } from 'lucide-react';
 
 interface NavbarProps {
   currentPage: string;
@@ -11,9 +12,13 @@ interface NavbarProps {
 
 export default function Navbar({ currentPage, onPageChange }: NavbarProps) {
   const { logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleLogout = async () => {
+  const handleQRScan = () => {
+    // Handle QR scan functionality
+    onPageChange('share');
+  };
+
+  const handleSettings = async () => {
     try {
       await logout();
       showToast('Logged out successfully', 'success');
@@ -23,69 +28,67 @@ export default function Navbar({ currentPage, onPageChange }: NavbarProps) {
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'profile', label: 'Profile' },
-    { id: 'share', label: 'Share' },
-    { id: 'connections', label: 'Connections' },
+    { 
+      id: 'dashboard', 
+      label: 'Dashboard', 
+      icon: LayoutDashboard,
+      isImageIcon: false
+    },
+    { 
+      id: 'connections', 
+      label: 'Connection', 
+      icon: '/icons/share.png',
+      isImageIcon: true
+    },
+    { 
+      id: 'profile', 
+      label: 'Profile', 
+      icon: User,
+      isImageIcon: false
+    },
+    { 
+      id: 'settings', 
+      label: 'Settings', 
+      icon: Settings,
+      isImageIcon: false,
+      onClick: handleSettings
+    },
   ];
 
   return (
-    <nav className="navbar fixed top-0 left-0 right-0 z-40 py-4">
-      <div className="max-w-6xl mx-auto px-8 flex justify-between items-center">
-        <div className="flex items-center gap-2 text-indigo-500 font-bold text-xl">
-          <span className="text-2xl">📱</span>
-          <span>NFC Card</span>
-        </div>
+    <>
+      {/* QR Scan Button - Overlapping the bottom navbar */}
+      <button
+        onClick={handleQRScan}
+        className="fixed bottom-12  left-1/2 transform -translate-x-1/4 w-16 h-16 bg-gray-800 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-600 transition-all duration-200 hover:scale-105 z-[60]"
+      >
+        <img src="/icons/scan.png" alt="QR Scan" className="w-6 h-6" />
+      </button>
 
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-8">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onPageChange(item.id as any)}
-              className={`nav-link ${currentPage === item.id ? 'active' : ''}`}
-            >
-              {item.label}
-            </button>
-          ))}
-          <button onClick={handleLogout} className="btn-secondary">
-            Logout
-          </button>
-        </div>
-
-        {/* Mobile Menu Button */}
-        <button
-          className="md:hidden flex flex-col gap-1 p-2"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          <span className="w-6 h-0.5 bg-gray-600 transition-all"></span>
-          <span className="w-6 h-0.5 bg-gray-600 transition-all"></span>
-          <span className="w-6 h-0.5 bg-gray-600 transition-all"></span>
-        </button>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="absolute top-full left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 md:hidden">
-            <div className="flex flex-col p-4 space-y-2">
-              {navItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    onPageChange(item.id as any);
-                    setIsMenuOpen(false);
-                  }}
-                  className={`nav-link text-left ${currentPage === item.id ? 'active' : ''}`}
-                >
-                  {item.label}
-                </button>
-              ))}
-              <button onClick={handleLogout} className="btn-secondary mt-4">
-                Logout
+      {/* Bottom Navigation */}
+      <nav className="bottom-navbar rounded-t-3xl">
+        <div className="flex items-center justify-around py-3 px-4">
+          {navItems.map((item) => {
+            return (
+              <button
+                key={item.id}
+                onClick={item.onClick ? item.onClick : () => onPageChange(item.id as any)}
+                className={`bottom-nav-item ${currentPage === item.id ? 'active' : ''}`}
+              >
+                {item.isImageIcon ? (
+                  <img src={item.icon as string} alt={item.label} className="w-5 h-5 mb-1" />
+                ) : (
+                  (() => {
+                    const IconComponent = item.icon as React.ComponentType<{className: string}>;
+                    return <IconComponent className="w-5 h-5 mb-1" />;
+                  })()
+                )}
+                <span className="text-xs">{item.label}</span>
               </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </nav>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 } 

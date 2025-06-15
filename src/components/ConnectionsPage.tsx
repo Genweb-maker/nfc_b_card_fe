@@ -3,24 +3,42 @@
 import { useState, useEffect } from 'react';
 import { getReceivedConnections, getSentConnections, deleteConnection } from '../lib/api';
 import { showToast } from './Toast';
+import { Bell, MapPin, Calendar, Eye, ExternalLink, Users, Mail, Phone, Globe, Briefcase, FileText, User, Building, Share2 } from 'lucide-react';
 
 interface Connection {
   _id: string;
   senderUid: string;
   receiverUid: string;
-  sharedProfile: {
-    fullName: string;
-    email: string;
-    phoneNumber?: string;
-    jobTitle?: string;
-    companyName?: string;
-    linkedIn?: string;
-    website?: string;
-    bio?: string;
+  sharedBy: {
+    _id: string;
+    profile: {
+      fullName: string;
+      email: string;
+      phoneNumber?: string;
+      jobTitle?: string;
+      companyName?: string;
+      linkedIn?: string;
+      website?: string;
+      bio?: string;
+      profilePicture?: string;
+    };
   };
   shareMethod: 'NFC' | 'QR';
-  createdAt: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+    accuracy: number;
+  };
+  deviceInfo?: {
+    userAgent: string;
+    platform: string;
+    screenResolution: string;
+    timestamp: string;
+  };
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ConnectionResponse {
@@ -105,112 +123,171 @@ export default function ConnectionsPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      month: 'short',
+      year: 'numeric'
     });
+  };
+
+  const handleViewProfile = (connection: Connection, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedConnection(connection);
+  };
+
+  const handleViewLocation = (connection: Connection, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    // For now, show in modal - could be enhanced to show map
+    showToast(`Location: ${connection.location?.address || 'Not provided'}`, 'info');
   };
 
   const currentConnections = activeTab === 'received' ? receivedConnections : sentConnections;
 
   if (loading) {
     return (
-      <div className="container mx-auto px-8 py-8">
-        <div className="text-center">
-          <div className="spinner mx-auto mb-4"></div>
-          <p className="text-white/80">Loading connections...</p>
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="spinner mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading connections...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-8 py-8">
+    <div className="min-h-screen bg-white pb-24">
       {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-white mb-4">Connections</h1>
-        <p className="text-xl text-white/80">Your networking history and received profiles</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex justify-center mb-8">
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1 flex">
-          <button
-            onClick={() => setActiveTab('received')}
-            className={`px-6 py-2 rounded-md font-medium transition-all ${
-              activeTab === 'received'
-                ? 'bg-white text-indigo-600 shadow-sm'
-                : 'text-white hover:text-white/80'
-            }`}
-          >
-            Received ({receivedConnections.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('sent')}
-            className={`px-6 py-2 rounded-md font-medium transition-all ${
-              activeTab === 'sent'
-                ? 'bg-white text-indigo-600 shadow-sm'
-                : 'text-white hover:text-white/80'
-            }`}
-          >
-            Sent ({sentConnections.length})
+      <div className="bg-white border-b border-gray-100 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/icons/Logomark.png" alt="NPC Logo" className="w-8 h-8" />
+            <h1 className="text-lg font-semibold text-gray-900">NPC Business Card</h1>
+          </div>
+          <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+            <Bell className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Connections Grid */}
-      <div className="max-w-6xl mx-auto">
+      {/* Page Title */}
+      <div className="px-6 py-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Connections</h2>
+          <button className="flex items-center text-gray-600 hover:text-gray-900 transition-colors">
+            <span className="text-sm mr-1">Sort by</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="px-6 mb-6">
+        <div className="flex border-b border-gray-200 gap-8">
+          <button
+            onClick={() => setActiveTab('received')}
+            className={`pb-3 px-1 text-sm font-medium transition-colors relative ${
+              activeTab === 'received'
+                ? 'text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Received
+            {activeTab === 'received' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900 rounded-t-full -mb-px"></div>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('sent')}
+            className={`pb-3 px-1 text-sm font-medium transition-colors relative ${
+              activeTab === 'sent'
+                ? 'text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Shared
+            {activeTab === 'sent' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900 rounded-t-full -mb-px"></div>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Connections List */}
+      <div className="px-6">
         {currentConnections.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">👥</div>
-            <h3 className="text-xl font-semibold text-white mb-2">
+            <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
               No {activeTab} connections yet
             </h3>
-            <p className="text-white/80">
+            <p className="text-gray-500 text-sm">
               {activeTab === 'received' 
                 ? 'Start sharing your profile to receive connections!'
                 : 'Share your profile via NFC or QR code to build connections!'}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
             {currentConnections.map((connection) => (
               <div
                 key={connection._id}
-                className="connection-card cursor-pointer"
-                onClick={() => setSelectedConnection(connection)}
+                className="bg-white border border-gray-100 rounded-xl p-4 hover:shadow-sm transition-shadow"
               >
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="profile-avatar w-12 h-12 text-lg">
-                    {getUserInitials(connection.sharedProfile.fullName)}
+                  <div className="relative w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg overflow-hidden">
+                    {connection.sharedBy.profile.profilePicture ? (
+                      <img 
+                        src={connection.sharedBy.profile.profilePicture} 
+                        alt={connection.sharedBy.profile.fullName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      getUserInitials(connection.sharedBy.profile.fullName)
+                    )}
+                    <div className="absolute inset-0 bg-black/10 rounded-full"></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white truncate">
-                      {connection.sharedProfile.fullName}
+                    <h3 className="font-semibold text-gray-900 truncate text-base">
+                      {connection.sharedBy.profile.fullName}
                     </h3>
-                    <p className="text-white/80 text-sm truncate">
-                      {connection.sharedProfile.jobTitle && connection.sharedProfile.companyName
-                        ? `${connection.sharedProfile.jobTitle} at ${connection.sharedProfile.companyName}`
-                        : connection.sharedProfile.jobTitle || connection.sharedProfile.companyName || connection.sharedProfile.email}
+                    <p className="text-gray-600 text-sm truncate mt-1">
+                      <span className="text-gray-900 font-medium">
+                        {connection.sharedBy.profile.jobTitle || 'Professional'}
+                      </span>
+                      {connection.sharedBy.profile.companyName && (
+                        <>
+                          <span className="mx-1">•</span>
+                          <span>{connection.sharedBy.profile.companyName}</span>
+                        </>
+                      )}
                     </p>
+                    <div className="flex items-center text-xs text-gray-500 mt-2">
+                      <MapPin className="w-3 h-3 mr-1" />
+                      <span className="mr-3">{connection.location?.address || 'Location not provided'}</span>
+                      <span className="mx-1">•</span>
+                      <span className="ml-1">{formatDate(connection.createdAt)}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      connection.shareMethod === 'NFC' 
-                        ? 'bg-purple-100 text-purple-800' 
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {connection.shareMethod.toUpperCase()}
-                    </span>
-                  </div>
-                  <span className="text-white/60">
-                    {formatDate(connection.createdAt)}
-                  </span>
+                <div className="flex gap-3">
+                  <button
+                    onClick={(e) => handleViewProfile(connection, e)}
+                    className="flex-1 bg-gray-700 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View Profile
+                  </button>
+                  <button
+                    onClick={(e) => handleViewLocation(connection, e)}
+                    className="flex-1 bg-gray-100 text-gray-700 py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    View Location
+                  </button>
                 </div>
               </div>
             ))}
@@ -222,102 +299,202 @@ export default function ConnectionsPage() {
       {selectedConnection && (
         <div className="modal active">
           <div className="modal-content">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-bold">Connection Details</h2>
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Profile Details</h2>
               <button
                 onClick={() => setSelectedConnection(null)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
+                className="text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
               >
                 ×
               </button>
             </div>
             
             <div className="profile-preview">
-              <div className="profile-avatar">
-                {getUserInitials(selectedConnection.sharedProfile.fullName)}
-              </div>
-              
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 mb-1">
-                  {selectedConnection.sharedProfile.fullName}
-                </h3>
-                <p className="text-gray-600">
-                  {selectedConnection.sharedProfile.jobTitle && selectedConnection.sharedProfile.companyName 
-                    ? `${selectedConnection.sharedProfile.jobTitle} at ${selectedConnection.sharedProfile.companyName}`
-                    : selectedConnection.sharedProfile.jobTitle || selectedConnection.sharedProfile.companyName || ''}
-                </p>
-              </div>
-
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-500">📧</span>
-                  <span>{selectedConnection.sharedProfile.email}</span>
+              {/* Enhanced Profile Header */}
+              <div className="text-center mb-8">
+                <div className="relative w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4 shadow-lg overflow-hidden">
+                  {selectedConnection.sharedBy.profile.profilePicture ? (
+                    <img 
+                      src={selectedConnection.sharedBy.profile.profilePicture} 
+                      alt={selectedConnection.sharedBy.profile.fullName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getUserInitials(selectedConnection.sharedBy.profile.fullName)
+                  )}
+                  <div className="absolute inset-0 bg-black/10 rounded-full"></div>
                 </div>
                 
-                {selectedConnection.sharedProfile.phoneNumber && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">📞</span>
-                    <span>{selectedConnection.sharedProfile.phoneNumber}</span>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  {selectedConnection.sharedBy.profile.fullName}
+                </h3>
+                
+                {selectedConnection.sharedBy.profile.jobTitle && (
+                  <div className="flex items-center justify-center gap-2 text-gray-600 mb-1">
+                    <Briefcase className="w-4 h-4" />
+                    <span className="font-medium">{selectedConnection.sharedBy.profile.jobTitle}</span>
                   </div>
                 )}
                 
-                {selectedConnection.sharedProfile.website && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">🌐</span>
-                    <a 
-                      href={selectedConnection.sharedProfile.website} 
-                      className="text-indigo-600 hover:underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {selectedConnection.sharedProfile.website}
-                    </a>
-                  </div>
-                )}
-                
-                {selectedConnection.sharedProfile.linkedIn && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">💼</span>
-                    <a 
-                      href={selectedConnection.sharedProfile.linkedIn} 
-                      className="text-indigo-600 hover:underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      LinkedIn Profile
-                    </a>
+                {selectedConnection.sharedBy.profile.companyName && (
+                  <div className="flex items-center justify-center gap-2 text-gray-600">
+                    <Building className="w-4 h-4" />
+                    <span>{selectedConnection.sharedBy.profile.companyName}</span>
                   </div>
                 )}
               </div>
 
-              {selectedConnection.sharedProfile.bio && (
-                <div className="mb-6 pt-6 border-t">
-                  <h4 className="font-semibold mb-2">About</h4>
-                  <p className="text-gray-600">{selectedConnection.sharedProfile.bio}</p>
+              {/* Contact Information */}
+              <div className="mb-8">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-gray-600" />
+                  Contact Information
+                </h4>
+                <div className="space-y-4 bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Mail className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="font-medium text-gray-900">{selectedConnection.sharedBy.profile.email}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedConnection.sharedBy.profile.phoneNumber && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Phone className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Phone</p>
+                        <p className="font-medium text-gray-900">{selectedConnection.sharedBy.profile.phoneNumber}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedConnection.location && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                        <MapPin className="w-4 h-4 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Location</p>
+                        <p className="font-medium text-gray-900">{selectedConnection.location.address}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedConnection.sharedBy.profile.website && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Globe className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Website</p>
+                        <a 
+                          href={selectedConnection.sharedBy.profile.website} 
+                          className="font-medium text-indigo-600 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {selectedConnection.sharedBy.profile.website}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedConnection.sharedBy.profile.linkedIn && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Briefcase className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">LinkedIn</p>
+                        <a 
+                          href={selectedConnection.sharedBy.profile.linkedIn} 
+                          className="font-medium text-indigo-600 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View LinkedIn Profile
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {selectedConnection.sharedBy.profile.bio && (
+                <div className="mb-8">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-gray-600" />
+                    About
+                  </h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-gray-700 leading-relaxed">{selectedConnection.sharedBy.profile.bio}</p>
+                  </div>
                 </div>
               )}
 
-              <div className="pt-6 border-t">
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedConnection.shareMethod === 'NFC' 
-                        ? 'bg-purple-100 text-purple-800' 
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {selectedConnection.shareMethod.toUpperCase()}
-                    </span>
-                    <span>{activeTab === 'received' ? 'Received' : 'Sent'}</span>
+              {/* Connection Details */}
+              <div className="border-t pt-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Share2 className="w-5 h-5 text-gray-600" />
+                  Connection Details
+                </h4>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        selectedConnection.shareMethod === 'NFC' 
+                          ? 'bg-purple-100 text-purple-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {selectedConnection.shareMethod.toUpperCase()}
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        {activeTab === 'received' ? 'Received from' : 'Sent to'} this contact
+                      </span>
+                    </div>
                   </div>
-                  <span>{formatDate(selectedConnection.createdAt)}</span>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar className="w-4 h-4" />
+                    <span>Connected on {formatDate(selectedConnection.createdAt)}</span>
+                  </div>
+                  
+                  {selectedConnection.location && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <MapPin className="w-4 h-4" />
+                      <span>Location: {selectedConnection.location.address}</span>
+                    </div>
+                  )}
+                  
+                  {selectedConnection.deviceInfo && (
+                    <div className="space-y-2 pt-2 border-t border-gray-200">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        <span>Platform: {selectedConnection.deviceInfo.platform}</span>
+                      </div>
+                      {selectedConnection.deviceInfo.screenResolution && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                          <span>Screen: {selectedConnection.deviceInfo.screenResolution}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 {activeTab === 'received' && (
-                  <div className="flex gap-2">
+                  <div className="mt-6">
                     <button
                       onClick={() => handleDeleteConnection(selectedConnection._id)}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                      className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                     >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                       Delete Connection
                     </button>
                   </div>
