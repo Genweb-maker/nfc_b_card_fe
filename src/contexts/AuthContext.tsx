@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../lib/firebase';
 import { setAuthToken, removeAuthToken } from '../lib/api';
 
 interface AuthContextType {
@@ -10,7 +10,9 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  refreshToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,12 +49,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      const userCredential = await signInWithPopup(auth, googleProvider);
+      const token = await userCredential.user.getIdToken();
+      setAuthToken(token);
+    } catch (error: any) {
+      throw new Error(getAuthErrorMessage(error.code));
+    }
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
       removeAuthToken();
     } catch (error) {
       throw new Error('Failed to sign out');
+    }
+  };
+
+  const refreshToken = async (): Promise<string | null> => {
+    try {
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
+      
+      // Force refresh the token
+      const newToken = await user.getIdToken(true);
+      setAuthToken(newToken);
+      return newToken;
+    } catch (error) {
+      console.error('Failed to refresh token in AuthContext:', error);
+      return null;
     }
   };
 
@@ -80,7 +108,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signIn,
     signUp,
-    logout
+    signInWithGoogle,
+    logout,
+    refreshToken
   };
 
   return (
@@ -108,6 +138,14 @@ function getAuthErrorMessage(errorCode: string): string {
       return 'Too many failed attempts. Please try again later';
     case 'auth/network-request-failed':
       return 'Network error. Please check your connection';
+    case 'auth/popup-closed-by-user':
+      return 'Sign-in popup was closed before completing';
+    case 'auth/popup-blocked':
+      return 'Sign-in popup was blocked by your browser';
+    case 'auth/cancelled-popup-request':
+      return 'Sign-in request was cancelled';
+    case 'auth/account-exists-with-different-credential':
+      return 'An account already exists with the same email but different sign-in method';
     default:
       return 'Authentication failed. Please try again';
   }

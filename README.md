@@ -4,7 +4,7 @@ This is the Next.js frontend for the NFC Business Card application.
 
 ## Features
 
-- 🔐 Firebase Authentication
+- 🔐 Firebase Authentication (Email/Password + Google Sign-In)
 - 👤 User Profile Management
 - 📱 NFC Sharing (on supported devices)
 - 📊 QR Code Generation and Scanning
@@ -12,6 +12,7 @@ This is the Next.js frontend for the NFC Business Card application.
 - 📊 Dashboard with Statistics
 - 📱 Responsive Design
 - 🎨 Modern UI with Tailwind CSS
+- 🔄 Automatic Token Refresh Interceptor
 
 ## Prerequisites
 
@@ -58,12 +59,26 @@ npm run build
 npm start
 ```
 
+## Authentication Features
+
+### Login Methods
+- **Email/Password Authentication** - Traditional sign-up and login
+- **Google Sign-In** - One-click authentication with Google accounts
+- **Automatic Token Refresh** - Seamless token renewal when expired
+- **Session Management** - Secure token storage and cleanup
+
+### Security Features
+- **Token Expiration Handling** - Automatic refresh of expired Firebase ID tokens
+- **API Request Interceptor** - Transparent token refresh on 401 responses
+- **Graceful Fallback** - Redirect to login if token refresh fails
+- **Concurrency Control** - Prevents multiple simultaneous refresh attempts
+
 ## Technologies Used
 
 - **Next.js 15** - React framework
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
-- **Firebase** - Authentication
+- **Firebase** - Authentication & Google Sign-In
 - **QR Code Libraries** - QR generation and scanning
 - **Web NFC API** - NFC functionality (Chrome/Edge on Android)
 
