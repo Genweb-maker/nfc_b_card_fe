@@ -3,8 +3,8 @@ import { auth } from './firebase';
 // API base URL - In production, this should be your backend URL
 const API_BASE = process.env.NODE_ENV === 'production' 
   ? process.env.NEXT_PUBLIC_API_URL
-  : 'http://localhost:5000/api';
-  // : 'https://nfc-business-card-be.onrender.com/api';
+  // : 'http://localhost:5000/api';
+  : 'https://nfc-business-card-be.onrender.com/api';
 
 // Track ongoing token refresh to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getUserProfile, updateUserProfile, createUserProfile } from '../lib/api';
 import { showToast } from './Toast';
+import { handleError, showSuccess, handleNetworkError } from '../lib/errorHandler';
 
 interface ProfileData {
   createdAt: string;
@@ -40,6 +41,8 @@ export default function ProfilePage() {
   });
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadProfile();
@@ -71,24 +74,165 @@ export default function ProfilePage() {
     try {
       const response = await updateUserProfile(profile);
       if (response.success) {
-        showToast('Profile updated successfully!', 'success');
+        showSuccess('Profile updated successfully!');
         setEditing(false);
       } else {
         const createResponse = await createUserProfile(profile);
         if (createResponse.success) {
-          showToast('Profile created successfully!', 'success');
+          showSuccess('Profile created successfully!');
           setEditing(false);
         }
       }
     } catch (error: any) {
-      showToast(error.message || 'Failed to save profile', 'error');
+      handleNetworkError(error, 'save profile');
+    }
+  };
+
+  const downloadBusinessCard = async () => {
+    try {
+      // Create a canvas to draw the business card
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Set canvas size (business card dimensions: 3.5" x 2" at 300 DPI)
+      canvas.width = 1050; // 3.5 * 300
+      canvas.height = 600;  // 2 * 300
+
+      // Fill background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Add border
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+      // Profile circle (top-left)
+      const centerX = 100;
+      const centerY = 100;
+      const radius = 40;
+      
+      // Create gradient for profile circle
+      const gradient = ctx.createLinearGradient(centerX - radius, centerY - radius, centerX + radius, centerY + radius);
+      gradient.addColorStop(0, '#60a5fa');
+      gradient.addColorStop(1, '#2563eb');
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Add person icon (simplified)
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '30px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('👤', centerX, centerY + 10);
+
+      // Name
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 36px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(profile?.profile?.fullName || 'Robert Downey', 200, 80);
+
+      // Job Title
+      ctx.fillStyle = '#475569';
+      ctx.font = '24px Arial';
+      ctx.fillText(profile?.profile?.jobTitle || 'Project Manager', 200, 110);
+
+      // Company Name
+      ctx.fillStyle = '#64748b';
+      ctx.font = '18px Arial';
+      ctx.fillText(profile?.profile?.companyName || 'Company Name', 200, 135);
+
+      // Contact details
+      let yPos = 200;
+      const lineHeight = 35;
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#475569';
+
+      // Email
+      ctx.fillText('📧 ' + (profile?.profile?.email || 'robert@gmail.com'), 60, yPos);
+      yPos += lineHeight;
+
+      // Phone
+      ctx.fillText('📞 ' + (profile?.profile?.phoneNumber || '+91 1234567890'), 60, yPos);
+      yPos += lineHeight;
+
+      // Website
+      if (profile?.profile?.website) {
+        ctx.fillText('🌐 ' + profile.profile.website, 60, yPos);
+        yPos += lineHeight;
+      }
+
+      // LinkedIn
+      if (profile?.profile?.linkedIn) {
+        ctx.fillText('💼 LinkedIn Profile', 60, yPos);
+        yPos += lineHeight;
+      }
+
+      // Bio (if available and space permits)
+      if (profile?.profile?.bio && yPos < 500) {
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#64748b';
+        const bioText = profile.profile.bio.substring(0, 100) + (profile.profile.bio.length > 100 ? '...' : '');
+        const words = bioText.split(' ');
+        let line = '';
+        let bioY = yPos + 20;
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + words[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          const testWidth = metrics.width;
+          
+          if (testWidth > 900 && i > 0) {
+            ctx.fillText(line, 60, bioY);
+            line = words[i] + ' ';
+            bioY += 20;
+            if (bioY > 550) break; // Don't exceed card bounds
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, 60, bioY);
+      }
+
+      // Convert canvas to blob and download
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${profile?.profile?.fullName?.replace(/\s+/g, '_') || 'Business_Card'}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showSuccess('Business card downloaded successfully!');
+        }
+      }, 'image/png');
+
+    } catch (error) {
+      handleError(error, { context: 'download business card' });
     }
   };
 
   const ProfileIcon = () => (
-    <div className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center mx-auto">
+    <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
       <svg
-        className="w-10 h-10 text-gray-600"
+        className="w-12 h-12 text-white"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+      </svg>
+    </div>
+  );
+
+  const SmallProfileIcon = ({ size = "w-16 h-16" }) => (
+    <div className={`${size} bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center shadow-md`}>
+      <svg
+        className="w-8 h-8 text-white"
         fill="currentColor"
         viewBox="0 0 24 24"
       >
@@ -99,7 +243,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
           <div className="spinner mx-auto mb-4"></div>
           <p className="text-gray-600">Loading profile...</p>
@@ -109,261 +253,393 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
       {/* Header */}
-      <div
-        className="text-white px-4 py-6 rounded-b-3xl"
-        style={{
-          background: 'linear-gradient(to right, #475467, #101828)'
-        }}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <button className="p-2">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="max-w-4xl mx-auto mb-8">
+        <div className="flex items-center justify-between">
+          <button className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+            <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="text-lg font-semibold">My Profile</h1>
-          <button
-            onClick={() => editing ? handleSave() : setEditing(true)}
-            className="p-2"
-          >
-            {editing ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          <h1 className="text-2xl font-bold text-slate-800">My Business Card</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowPreview(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            )}
-          </button>
-        </div>
-
-        {/* Profile Section */}
-        <div className="text-center">
-          <ProfileIcon />
-          <h2 className="text-2xl font-semibold mt-4 mb-1">
-            {profile?.profile?.fullName || 'Robert Downey'}
-          </h2>
-          <p className="text-gray-300 text-base">
-            {profile?.profile?.jobTitle || 'Project Manager'}
-          </p>
+              Preview
+            </button>
+            <button
+              onClick={() => editing ? handleSave() : setEditing(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              {editing ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Save
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Edit
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 py-6 space-y-6">
-        {/* Personal Details */}
-        <div className="bg-white ">
-          <div className="px-4 py-3 bg-gray-100 rounded-t-lg">
-            <h3 className="text-lg font-semibold text-gray-800">Personal Details</h3>
-          </div>
-          <div className="p-4 space-y-4 bg-gray-100">
-            <div>
-              <div className="bg-gray-100 py-2 rounded-md mb-2">
-                <label className="block text-base font-medium text-gray-700">
-                  Full name
-                </label>
+      {/* Business Card */}
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+          {/* Card Header */}
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-8 text-white">
+            <div className="flex items-center gap-6">
+              <ProfileIcon />
+              <div className="flex-1">
+                {editing ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={profile?.profile?.fullName || ''}
+                      onChange={handleInputChange}
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="Full Name"
+                    />
+                    <input
+                      type="text"
+                      name="jobTitle"
+                      value={profile?.profile?.jobTitle || ''}
+                      onChange={handleInputChange}
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="Job Title"
+                    />
+                    <input
+                      type="text"
+                      name="companyName"
+                      value={profile?.profile?.companyName || ''}
+                      onChange={handleInputChange}
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="Company Name"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <h2 className="text-3xl font-bold mb-2">
+                      {profile?.profile?.fullName || 'Robert Downey'}
+                    </h2>
+                    <p className="text-xl text-slate-300 mb-1">
+                      {profile?.profile?.jobTitle || 'Project Manager'}
+                    </p>
+                    <p className="text-lg text-slate-400">
+                      {profile?.profile?.companyName || 'Company Name'}
+                    </p>
+                  </div>
+                )}
               </div>
-              {editing ? (
-                <input
-                  type="text"
-                  name="fullName"
-                  value={profile?.profile?.fullName || ''}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-white border border-none rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-md border border-white">
-                  <p className="text-gray-800">{profile?.profile?.fullName || 'Robert Downey'}</p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="bg-gray-100 py-2 rounded-md mb-2">
-                <label className="block text-base font-medium text-gray-700">
-                  Email ID
-                </label>
-              </div>
-              {editing ? (
-                <input
-                  type="email"
-                  name="email"
-                  value={profile?.profile?.email || ''}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-md border border-none">
-                  <p className="text-gray-800">{profile?.profile?.email || 'robert@gmail.com'}</p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="bg-gray-100 py-2 rounded-md mb-2">
-                <label className="block text-base font-medium text-gray-700">
-                  Phone Number
-                </label>
-              </div>
-              {editing ? (
-                <div className="flex">
-                  <span className="inline-flex items-center px-3 py-2 border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-l-md">
-                    +91
-                  </span>
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    value={profile?.profile?.phoneNumber?.replace('+91 ', '') || ''}
-                    onChange={(e) => handleInputChange({
-                      ...e,
-                      target: {
-                        ...e.target,
-                        value: '+91 ' + e.target.value
-                      }
-                    } as React.ChangeEvent<HTMLInputElement>)}
-                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="1234567890"
-                  />
-                </div>
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-md border border-none flex items-center">
-                  <span className="text-gray-500 mr-2">+91</span>
-                  <span className="text-gray-800">
-                    {profile?.profile?.phoneNumber?.replace('+91 ', '') || '1234567890'}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
-        </div>
 
-        {/* Professional Details */}
-        <div className="bg-white ">
-          <div className="px-4 py-3 bg-gray-100 rounded-t-lg">
-            <h3 className="text-lg font-semibold text-gray-800">Professional Details</h3>
+          {/* Card Body */}
+          <div className="p-8">
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Contact Information */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Contact Information
+                </h3>
+
+                {/* Email */}
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg border">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
+                    {editing ? (
+                      <input
+                        type="email"
+                        name="email"
+                        value={profile?.profile?.email || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="text-slate-800 font-medium">{profile?.profile?.email || 'robert@gmail.com'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg border">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-600 mb-1">Phone</label>
+                    {editing ? (
+                      <input
+                        type="tel"
+                        name="phoneNumber"
+                        value={profile?.profile?.phoneNumber || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="text-slate-800 font-medium">{profile?.profile?.phoneNumber || '+91 1234567890'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Website */}
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg border">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-600 mb-1">Website</label>
+                    {editing ? (
+                      <input
+                        type="url"
+                        name="website"
+                        value={profile?.profile?.website || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="https://yourwebsite.com"
+                      />
+                    ) : (
+                      <p className="text-slate-800 font-medium">{profile?.profile?.website || 'Add website'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* LinkedIn */}
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg border">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-600 mb-1">LinkedIn</label>
+                    {editing ? (
+                      <input
+                        type="url"
+                        name="linkedIn"
+                        value={profile?.profile?.linkedIn || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="https://linkedin.com/in/yourprofile"
+                      />
+                    ) : (
+                      <p className="text-slate-800 font-medium">{profile?.profile?.linkedIn || 'Add LinkedIn profile'}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* About Section */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  About Me
+                </h3>
+
+                <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border">
+                  {editing ? (
+                    <textarea
+                      name="bio"
+                      value={profile?.profile?.bio || ''}
+                      onChange={handleInputChange}
+                      rows={6}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      placeholder="Tell us about yourself, your experience, and what you do..."
+                    />
+                  ) : (
+                    <p className="text-slate-700 leading-relaxed">
+                      {profile?.profile?.bio || 'Add your professional bio here. Describe your experience, skills, and what makes you unique in your field.'}
+                    </p>
+                  )}
+                </div>
+
+                </div>
+            </div>
           </div>
-          <div className="p-4 space-y-4 bg-gray-100">
-            <div>
-              <div className="bg-gray-100 py-2 rounded-md mb-2">
-                <label className="block text-base font-medium text-gray-700">
-                  Job Title
-                </label>
-              </div>
-              {editing ? (
-                <input
-                  type="text"
-                  name="jobTitle"
-                  value={profile?.profile?.jobTitle || ''}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-md border border-none">
-                  <p className="text-gray-800">{profile?.profile?.jobTitle || 'Project Manager'}</p>
-                </div>
-              )}
-            </div>
 
-            <div>
-              <div className="bg-gray-100 py-2 rounded-md mb-2">
-                <label className="block text-base font-medium text-gray-700">
-                  Company Name
-                </label>
+          {/* Card Footer */}
+          <div className="bg-slate-50 px-8 py-4 border-t border-slate-200">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-slate-500">
+                Professional Business Card
               </div>
-              {editing ? (
-                <input
-                  type="text"
-                  name="companyName"
-                  value={profile?.profile?.companyName || ''}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-md border border-none">
-                  <p className="text-gray-800">{profile?.profile?.companyName || 'Add company name'}</p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="bg-gray-100 py-2 rounded-md mb-2">
-                <label className="block text-base font-medium text-gray-700">
-                  LinkedIn Profile
-                </label>
+              <div className="flex items-center gap-4">
+                <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                  </svg>
+                </button>
+                <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                </button>
               </div>
-              {editing ? (
-                <input
-                  type="url"
-                  name="linkedIn"
-                  value={profile?.profile?.linkedIn || ''}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://linkedin.com/in/yourprofile"
-                />
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-md border border-none">
-                  <p className="text-gray-800">{profile?.profile?.linkedIn || 'Add LinkedIn profile'}</p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="bg-gray-100 py-2 rounded-md mb-2">
-                <label className="block text-base font-medium text-gray-700">
-                  Website
-                </label>
-              </div>
-              {editing ? (
-                <input
-                  type="url"
-                  name="website"
-                  value={profile?.profile?.website || ''}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://yourwebsite.com"
-                />
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-md border border-none">
-                  <p className="text-gray-800">{profile?.profile?.website || 'Add website'}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Bio Section */}
-        <div className="bg-white ">
-          <div className="px-4 py-3 bg-gray-100 rounded-t-lg">
-            <h3 className="text-lg font-semibold text-gray-800">About</h3>
-          </div>
-          <div className="p-4 bg-gray-100">
-            <div>
-              <div className="bg-gray-100 py-2 rounded-md mb-2">
-                <label className="block text-base font-medium text-gray-700">
-                  Bio
-                </label>
-              </div>
-              {editing ? (
-                <textarea
-                  name="bio"
-                  value={profile?.profile?.bio || ''}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="Brief description about yourself..."
-                />
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-md border border-none">
-                  <p className="text-gray-800">{profile?.profile?.bio || 'Add your bio'}</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[95vh] overflow-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <h2 className="text-xl font-semibold text-slate-800">Business Card Preview</h2>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Actual Business Card */}
+            <div className="p-8 flex justify-center">
+              <div ref={cardRef} className="w-[420px] h-64 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
+                {/* Card Content */}
+                <div className="h-full p-6 flex flex-col">
+                  {/* Header with Profile Pic and Basic Info */}
+                  <div className="flex items-start gap-4 mb-4">
+                    <SmallProfileIcon size="w-16 h-16" />
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-slate-800 leading-tight">
+                        {profile?.profile?.fullName || 'Robert Downey'}
+                      </h3>
+                      <p className="text-sm text-slate-600 font-medium">
+                        {profile?.profile?.jobTitle || 'Project Manager'}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {profile?.profile?.companyName || 'Company Name'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Contact Details - Grid Layout */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-600 mb-3">
+                    {/* Email */}
+                    <div className="flex items-center gap-2">
+                      <svg className="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                      </svg>
+                      <span className="truncate">{profile?.profile?.email || 'robert@gmail.com'}</span>
+                    </div>
+
+                    {/* Phone */}
+                    <div className="flex items-center gap-2">
+                      <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <span className="truncate">{profile?.profile?.phoneNumber || '+91 1234567890'}</span>
+                    </div>
+
+                    {/* Website */}
+                    {profile?.profile?.website && (
+                      <div className="flex items-center gap-2">
+                        <svg className="w-3 h-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        <span className="truncate">{profile.profile.website.replace(/^https?:\/\//, '')}</span>
+                      </div>
+                    )}
+
+                    {/* LinkedIn */}
+                    {profile?.profile?.linkedIn && (
+                      <div className="flex items-center gap-2">
+                        <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                        </svg>
+                        <span className="truncate">LinkedIn</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bio/Description */}
+                  {profile?.profile?.bio && (
+                    <div className="mt-2 pt-3 border-t border-slate-200 flex-1">
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {profile.profile.bio.length > 120 
+                          ? profile.profile.bio.substring(0, 120) + '...' 
+                          : profile.profile.bio
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Decorative Elements */}
+                  <div className="flex justify-between items-end mt-auto">
+                    <div className="text-xs text-slate-400">
+                      {new Date().getFullYear()}
+                    </div>
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full opacity-30"></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full opacity-50"></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full opacity-70"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-slate-200 bg-slate-50">
+              <div className="text-sm text-slate-500">
+                This is how your business card will appear when printed or shared
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={downloadBusinessCard}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </button>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                  </svg>
+                  Share
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

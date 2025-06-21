@@ -6,4 +6,5 @@ export { default as SharePage } from './SharePage';
 export { default as ConnectionsPage } from './ConnectionsPage';
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as Navbar } from './Navbar';
-export { default as Toast } from './Toast'; 
+export { default as Toast } from './Toast';
+export { default as ToastDemo } from './ToastDemo'; 

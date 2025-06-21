@@ -105,30 +105,7 @@
 
   /* QR Scan Button - Now handled inline in component */
 
-  /* Toast */
-  .toast {
-    @apply fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform translate-y-full opacity-0 transition-all duration-300;
-  }
-
-  .toast.show {
-    @apply translate-y-0 opacity-100;
-  }
-
-  .toast.success {
-    @apply bg-green-500 text-white;
-  }
-
-  .toast.error {
-    @apply bg-red-500 text-white;
-  }
-
-  .toast.warning {
-    @apply bg-yellow-500 text-white;
-  }
-
-  .toast.info {
-    @apply bg-blue-500 text-white;
-  }
+  /* Toast - Now handled by react-hot-toast with custom styling */
 
   /* Modal */
   .modal {
@@ -203,6 +180,36 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes toast-enter {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-leave {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-enter {
+  animation: toast-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
+.animate-leave {
+  animation: toast-leave 0.4s cubic-bezier(0.06, 0.71, 0.55, 1) forwards;
 }
 
 /* Add Inter font class */

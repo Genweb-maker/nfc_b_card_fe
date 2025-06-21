@@ -38,17 +38,25 @@ interface LocationData {
   accuracy?: number;
 }
 
-// OpenStreetMap reverse geocoding function
+// OpenStreetMap reverse geocoding function with 5-second timeout
 const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
   try {
+    // Create an AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+    
     const response = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
       {
         headers: {
           'User-Agent': 'BusinessCardApp/1.0'
-        }
+        },
+        signal: controller.signal
       }
     );
+    
+    // Clear the timeout if request completes
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error('Geocoding request failed');
@@ -61,8 +69,14 @@ const reverseGeocode = async (latitude: number, longitude: number): Promise<stri
     } else {
       return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Reverse geocoding failed:', error);
+    
+    // Check if the error is due to timeout/abort
+    if (error.name === 'AbortError') {
+      console.warn('Geocoding request timed out after 5 seconds');
+    }
+    
     return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
   }
 };
@@ -88,11 +102,11 @@ const getCurrentLocation = (): Promise<LocationData> => {
             accuracy
           });
         } catch (error) {
-          // If reverse geocoding fails, still return coordinates
+          // If reverse geocoding fails, use "No location"
           resolve({
             latitude,
             longitude,
-            address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+            address: "No location",
             accuracy
           });
         }

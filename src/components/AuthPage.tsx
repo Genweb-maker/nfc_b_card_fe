@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { showToast } from './Toast';
+import { handleFormError, showSuccess } from '../lib/errorHandler';
 
 export default function AuthPage() {
   const { signIn, signUp, signInWithGoogle } = useAuth();
@@ -24,16 +25,16 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         await signIn(formData.email, formData.password);
-        showToast('Logged in successfully!', 'success');
+        showSuccess('Logged in successfully!');
       } else {
         if (formData.password !== formData.confirmPassword) {
           throw new Error('Passwords do not match');
         }
         await signUp(formData.email, formData.password);
-        showToast('Account created successfully!', 'success');
+        showSuccess('Account created successfully!');
       }
     } catch (error: any) {
-      showToast(error.message, 'error');
+      handleFormError(error, isLogin ? 'login' : 'registration');
     } finally {
       setLoading(false);
     }
@@ -58,9 +59,9 @@ export default function AuthPage() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
-      showToast('Signed in with Google successfully!', 'success');
+      showSuccess('Signed in with Google successfully!');
     } catch (error: any) {
-      showToast(error.message, 'error');
+      handleFormError(error, 'Google sign-in');
     } finally {
       setGoogleLoading(false);
     }
