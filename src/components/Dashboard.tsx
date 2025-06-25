@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getConnectionStats } from '../lib/api';
 import { showToast } from './Toast';
-import { Users, Download, Smartphone, ScanLine, Bell, ChevronDown } from 'lucide-react';
+import { Users, Download, Smartphone, ScanLine, Bell, Share2, UserPlus, Settings, QrCode, Wifi, BarChart3, Zap } from 'lucide-react';
 
 interface Stats {
   received: number;
@@ -26,10 +26,25 @@ export default function Dashboard({ onPageChange }: DashboardProps) {
     total: 0
   });
   const [loading, setLoading] = useState(true);
+  const [showPWAButton, setShowPWAButton] = useState(false);
 
   useEffect(() => {
     loadStats();
+    checkPWAInstallable();
   }, []);
+
+  const checkPWAInstallable = () => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isInstalled = (window as any).navigator?.standalone === true || isStandalone;
+    setShowPWAButton(!isInstalled);
+  };
+
+  const handlePWAInstall = () => {
+    // Simple PWA install prompt
+    if ('serviceWorker' in navigator) {
+      showToast('Add this app to your home screen for a better experience!', 'info', 6000);
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -91,7 +106,16 @@ export default function Dashboard({ onPageChange }: DashboardProps) {
           <img src="/icons/Logomark.png" alt="NPC Business Card" className="w-6 h-6" />
           <span className="font-semibold text-lg">NPC Business Card</span>
         </div>
-        <div className="text-gray-800">
+        <div className="flex items-center gap-3 text-gray-800">
+          {showPWAButton && (
+            <button
+              onClick={handlePWAInstall}
+              className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-indigo-700 transition-colors flex items-center gap-1"
+            >
+              <Download className="w-4 h-4" />
+              Install App
+            </button>
+          )}
           <Bell className="w-6 h-6" />
         </div>
       </div>
@@ -104,28 +128,55 @@ export default function Dashboard({ onPageChange }: DashboardProps) {
 
       {/* Dashboard Section */}
       <div className="px-4 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Dashboard</h2>
-          <button className="flex items-center gap-1 text-gray-600 text-sm">
-            Sort by
-            <ChevronDown className="w-3 h-3" />
-          </button>
-        </div>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Dashboard</h2>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {statCards.map((stat, index) => {
-            const IconComponent = stat.icon;
-            return (
-              <div key={index} className={`${stat.bgColor} rounded-2xl p-4 text-white`}>
-                <div className="flex items-center gap-3 mb-2">
-                  <IconComponent className="w-6 h-6" />
-                </div>
-                <div className="text-sm text-white/80 mb-1">{stat.title}</div>
-                <div className="text-2xl font-bold">{stat.value}</div>
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {statCards.map((card, index) => (
+            <div key={index} className={`${card.bgColor} text-white p-4 rounded-lg shadow-sm`}>
+              <div className="flex items-center justify-between mb-2">
+                <card.icon className="w-5 h-5" />
               </div>
-            );
-          })}
+              <p className="text-2xl font-bold">{card.value}</p>
+              <p className="text-xs opacity-90">{card.title}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="px-4 mb-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-3 gap-4">
+          <button
+            onClick={() => onPageChange('share')}
+            className="bg-white p-4 rounded-lg shadow-sm flex flex-col items-center gap-2 hover:shadow-md transition-shadow"
+          >
+            <div className="bg-blue-100 p-3 rounded-full">
+              <Share2 className="w-6 h-6 text-blue-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-800">Share</span>
+          </button>
+
+          <button
+            onClick={() => onPageChange('connections')}
+            className="bg-white p-4 rounded-lg shadow-sm flex flex-col items-center gap-2 hover:shadow-md transition-shadow"
+          >
+            <div className="bg-green-100 p-3 rounded-full">
+              <UserPlus className="w-6 h-6 text-green-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-800">Connections</span>
+          </button>
+
+          <button
+            onClick={() => onPageChange('profile')}
+            className="bg-white p-4 rounded-lg shadow-sm flex flex-col items-center gap-2 hover:shadow-md transition-shadow"
+          >
+            <div className="bg-purple-100 p-3 rounded-full">
+              <Settings className="w-6 h-6 text-purple-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-800">Profile</span>
+          </button>
         </div>
       </div>
     </div>
