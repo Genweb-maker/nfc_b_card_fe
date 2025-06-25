@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://nfc-business-card.vercel.app/sitemap.xml
+
+# Crawl delay (optional)
+Crawl-delay: 10
+
+# Block common unnecessary paths (if any)
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+
+# Allow important pages
+Allow: /
+Allow: /auth
+Allow: /dashboard
+Allow: /profile
+Allow: /share
+Allow: /connections 

@@ -4,18 +4,91 @@
   "description": "Share your business card digitally with NFC and QR codes",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#667eea",
   "theme_color": "#6366f1",
+  "scope": "/",
+  "categories": ["business", "networking", "social"],
+  "lang": "en-US",
+  "dir": "ltr",
   "icons": [
+    {
+      "src": "/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Share Profile",
+      "short_name": "Share",
+      "description": "Quickly share your business card",
+      "url": "/?page=share",
+      "icons": [{ "src": "/icons/share.png", "sizes": "32x32" }]
+    },
+    {
+      "name": "View Connections",
+      "short_name": "Connections",
+      "description": "View your connections",
+      "url": "/?page=connections",
+      "icons": [{ "src": "/icons/user-add.png", "sizes": "32x32" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1024x768",
+      "type": "image/png",
+      "form_factor": "wide"
     }
   ]
 } 

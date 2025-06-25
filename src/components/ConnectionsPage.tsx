@@ -58,15 +58,31 @@ export default function ConnectionsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
   const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null);
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'company'>('newest');
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   useEffect(() => {
     loadConnections();
   }, [activeTab]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.sort-dropdown')) {
+        setShowSortMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const loadConnections = async () => {
     try {
       setLoading(true);
-      
+
       if (activeTab === 'received') {
         const response: ConnectionResponse = await getReceivedConnections();
         if (response.success) {
@@ -95,14 +111,14 @@ export default function ConnectionsPage() {
       const response = await deleteConnection(connectionId);
       if (response.success) {
         showToast('Connection deleted successfully', 'success');
-        
+
         // Remove from local state
         if (activeTab === 'received') {
           setReceivedConnections(prev => prev.filter(c => c._id !== connectionId));
         } else {
           setSentConnections(prev => prev.filter(c => c._id !== connectionId));
         }
-        
+
         // Close modal
         setSelectedConnection(null);
       }
@@ -140,7 +156,28 @@ export default function ConnectionsPage() {
     showToast(`Location: ${connection.location?.address || 'Not provided'}`, 'info');
   };
 
-  const currentConnections = activeTab === 'received' ? receivedConnections : sentConnections;
+  const sortConnections = (connections: Connection[]): Connection[] => {
+    return [...connections].sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'name':
+          return a.sharedBy.profile.fullName.localeCompare(b.sharedBy.profile.fullName);
+        case 'company':
+          const aCompany = a.sharedBy.profile.companyName || '';
+          const bCompany = b.sharedBy.profile.companyName || '';
+          return aCompany.localeCompare(bCompany);
+        default:
+          return 0;
+      }
+    });
+  };
+
+  const currentConnections = sortConnections(
+    activeTab === 'received' ? receivedConnections : sentConnections
+  );
 
   if (loading) {
     return (
@@ -174,12 +211,49 @@ export default function ConnectionsPage() {
       <div className="px-6 py-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Connections</h2>
-          <button className="flex items-center text-gray-600 hover:text-gray-900 transition-colors">
-            <span className="text-sm mr-1">Sort by</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-            </svg>
-          </button>
+          <div className="relative sort-dropdown">
+            <button
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors bg-gray-50 px-3 py-2 rounded-lg"
+            >
+              <span className="text-sm mr-1">
+                Sort by {sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : sortBy === 'name' ? 'Name' : 'Company'}
+              </span>
+              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showSortMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                <div className="py-1">
+                  {[
+                    { key: 'newest', label: 'Newest First' },
+                    { key: 'oldest', label: 'Oldest First' },
+                    { key: 'name', label: 'Name (A-Z)' },
+                    { key: 'company', label: 'Company (A-Z)' }
+                  ].map((option) => (
+                    <button
+                      key={option.key}
+                      onClick={() => {
+                        setSortBy(option.key as typeof sortBy);
+                        setShowSortMenu(false);
+                      }}
+                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${sortBy === option.key ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                        }`}
+                    >
+                      {option.label}
+                      {sortBy === option.key && (
+                        <svg className="w-4 h-4 inline ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -188,11 +262,10 @@ export default function ConnectionsPage() {
         <div className="flex border-b border-gray-200 gap-8">
           <button
             onClick={() => setActiveTab('received')}
-            className={`pb-3 px-1 text-sm font-medium transition-colors relative ${
-              activeTab === 'received'
-                ? 'text-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`pb-3 px-1 text-sm font-medium transition-colors relative ${activeTab === 'received'
+              ? 'text-gray-900'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Received
             {activeTab === 'received' && (
@@ -201,11 +274,10 @@ export default function ConnectionsPage() {
           </button>
           <button
             onClick={() => setActiveTab('sent')}
-            className={`pb-3 px-1 text-sm font-medium transition-colors relative ${
-              activeTab === 'sent'
-                ? 'text-gray-900'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`pb-3 px-1 text-sm font-medium transition-colors relative ${activeTab === 'sent'
+              ? 'text-gray-900'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Shared
             {activeTab === 'sent' && (
@@ -224,7 +296,7 @@ export default function ConnectionsPage() {
               No {activeTab} connections yet
             </h3>
             <p className="text-gray-500 text-sm">
-              {activeTab === 'received' 
+              {activeTab === 'received'
                 ? 'Start sharing your profile to receive connections!'
                 : 'Share your profile via NFC or QR code to build connections!'}
             </p>
@@ -239,8 +311,8 @@ export default function ConnectionsPage() {
                 <div className="flex items-start gap-4 mb-4">
                   <div className="relative w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg overflow-hidden">
                     {connection.sharedBy.profile.profilePicture ? (
-                      <img 
-                        src={connection.sharedBy.profile.profilePicture} 
+                      <img
+                        src={connection.sharedBy.profile.profilePicture}
                         alt={connection.sharedBy.profile.fullName}
                         className="w-full h-full object-cover"
                       />
@@ -308,14 +380,14 @@ export default function ConnectionsPage() {
                 ×
               </button>
             </div>
-            
+
             <div className="profile-preview">
               {/* Enhanced Profile Header */}
               <div className="text-center mb-8">
                 <div className="relative w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4 shadow-lg overflow-hidden">
                   {selectedConnection.sharedBy.profile.profilePicture ? (
-                    <img 
-                      src={selectedConnection.sharedBy.profile.profilePicture} 
+                    <img
+                      src={selectedConnection.sharedBy.profile.profilePicture}
                       alt={selectedConnection.sharedBy.profile.fullName}
                       className="w-full h-full object-cover"
                     />
@@ -324,18 +396,18 @@ export default function ConnectionsPage() {
                   )}
                   <div className="absolute inset-0 bg-black/10 rounded-full"></div>
                 </div>
-                
+
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
                   {selectedConnection.sharedBy.profile.fullName}
                 </h3>
-                
+
                 {selectedConnection.sharedBy.profile.jobTitle && (
                   <div className="flex items-center justify-center gap-2 text-gray-600 mb-1">
                     <Briefcase className="w-4 h-4" />
                     <span className="font-medium">{selectedConnection.sharedBy.profile.jobTitle}</span>
                   </div>
                 )}
-                
+
                 {selectedConnection.sharedBy.profile.companyName && (
                   <div className="flex items-center justify-center gap-2 text-gray-600">
                     <Building className="w-4 h-4" />
@@ -360,7 +432,7 @@ export default function ConnectionsPage() {
                       <p className="font-medium text-gray-900">{selectedConnection.sharedBy.profile.email}</p>
                     </div>
                   </div>
-                  
+
                   {selectedConnection.sharedBy.profile.phoneNumber && (
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
@@ -384,7 +456,7 @@ export default function ConnectionsPage() {
                       </div>
                     </div>
                   )}
-                  
+
                   {selectedConnection.sharedBy.profile.website && (
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -392,8 +464,8 @@ export default function ConnectionsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Website</p>
-                        <a 
-                          href={selectedConnection.sharedBy.profile.website} 
+                        <a
+                          href={selectedConnection.sharedBy.profile.website}
                           className="font-medium text-indigo-600 hover:underline"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -403,7 +475,7 @@ export default function ConnectionsPage() {
                       </div>
                     </div>
                   )}
-                  
+
                   {selectedConnection.sharedBy.profile.linkedIn && (
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -411,8 +483,8 @@ export default function ConnectionsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">LinkedIn</p>
-                        <a 
-                          href={selectedConnection.sharedBy.profile.linkedIn} 
+                        <a
+                          href={selectedConnection.sharedBy.profile.linkedIn}
                           className="font-medium text-indigo-600 hover:underline"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -446,11 +518,10 @@ export default function ConnectionsPage() {
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        selectedConnection.shareMethod === 'NFC' 
-                          ? 'bg-purple-100 text-purple-800' 
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedConnection.shareMethod === 'NFC'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-blue-100 text-blue-800'
+                        }`}>
                         {selectedConnection.shareMethod.toUpperCase()}
                       </span>
                       <span className="text-sm text-gray-600">
@@ -462,14 +533,14 @@ export default function ConnectionsPage() {
                     <Calendar className="w-4 h-4" />
                     <span>Connected on {formatDate(selectedConnection.createdAt)}</span>
                   </div>
-                  
+
                   {selectedConnection.location && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <MapPin className="w-4 h-4" />
                       <span>Location: {selectedConnection.location.address}</span>
                     </div>
                   )}
-                  
+
                   {selectedConnection.deviceInfo && (
                     <div className="space-y-2 pt-2 border-t border-gray-200">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -485,7 +556,7 @@ export default function ConnectionsPage() {
                     </div>
                   )}
                 </div>
-                
+
                 {activeTab === 'received' && (
                   <div className="mt-6">
                     <button
