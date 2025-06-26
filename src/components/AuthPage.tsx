@@ -72,7 +72,7 @@ export default function AuthPage() {
       {/* Header */}
       <div className="bg-slate-800 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/icons/Logomark.png" alt="NFC Business Card" className="w-8 h-8 brightness-0 invert" />
+          <img src="/icons/nfc_logo.jpg" alt="NFC Business Card" className="w-8 h-8" />
           <span className="text-white font-medium">NFC Business Card</span>
         </div>
         <div className="flex items-center gap-1">

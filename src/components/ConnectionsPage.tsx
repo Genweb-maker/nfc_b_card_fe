@@ -198,7 +198,7 @@ export default function ConnectionsPage() {
       <div className="bg-white border-b border-gray-100 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/icons/Logomark.png" alt="NPC Logo" className="w-8 h-8" />
+            <img src="/icons/nfc_logo.jpg" alt="NPC Logo" className="w-8 h-8" />
             <h1 className="text-lg font-semibold text-gray-900">NPC Business Card</h1>
           </div>
           <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">

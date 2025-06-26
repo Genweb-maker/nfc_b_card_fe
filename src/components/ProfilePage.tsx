@@ -112,7 +112,7 @@ export default function ProfilePage() {
       {/* Header */}
       <div className="flex justify-between items-center px-4 py-6">
         <div className="flex items-center gap-2 text-gray-800">
-          <img src="/icons/Logomark.png" alt="NPC Business Card" className="w-6 h-6" />
+          <img src="/icons/nfc_logo.jpg" alt="NPC Business Card" className="w-6 h-6" />
           <span className="font-semibold text-lg">My Profile</span>
         </div>
         <button

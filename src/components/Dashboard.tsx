@@ -27,22 +27,96 @@ export default function Dashboard({ onPageChange }: DashboardProps) {
   });
   const [loading, setLoading] = useState(true);
   const [showPWAButton, setShowPWAButton] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     loadStats();
     checkPWAInstallable();
+    setupPWAInstallPrompt();
   }, []);
+
+  const setupPWAInstallPrompt = () => {
+    // Listen for the beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowPWAButton(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  };
 
   const checkPWAInstallable = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isInstalled = (window as any).navigator?.standalone === true || isStandalone;
-    setShowPWAButton(!isInstalled);
+    
+    // Check if it's a mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Check if it's iOS Safari
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isIOSSafari = isIOSDevice && !(window as any).MSStream;
+    
+    // Show PWA button if:
+    // 1. App is not already installed
+    // 2. It's a mobile device OR we have a deferred prompt
+    // 3. Special handling for iOS Safari (since it doesn't support beforeinstallprompt)
+    if (!isInstalled) {
+      if (isMobile || deferredPrompt || isIOSSafari) {
+        setShowPWAButton(true);
+      }
+    } else {
+      setShowPWAButton(false);
+    }
   };
 
-  const handlePWAInstall = () => {
-    // Simple PWA install prompt
-    if ('serviceWorker' in navigator) {
-      showToast('Add this app to your home screen for a better experience!', 'info', 6000);
+  const handlePWAInstall = async () => {
+    // Check if it's iOS Safari
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isIOSSafari = isIOSDevice && !(window as any).MSStream;
+    
+    if (deferredPrompt) {
+      // Use the native install prompt for supported browsers
+      try {
+        // Show the install prompt
+        const result = await deferredPrompt.prompt();
+        
+        // Wait for the user to respond to the prompt
+        const choiceResult = await deferredPrompt.userChoice;
+        
+        if (choiceResult.outcome === 'accepted') {
+          showToast('App installed successfully!', 'success');
+          setShowPWAButton(false);
+        } else {
+          showToast('App installation cancelled', 'info');
+        }
+        
+        // Clear the deferredPrompt so it can only be used once
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('PWA installation failed:', error);
+        showToast('Installation failed. Please try adding to home screen manually.', 'error');
+      }
+    } else if (isIOSSafari) {
+      // Special instructions for iOS Safari
+      showToast(
+        'To install: 1) Tap the Share button 2) Scroll down and tap "Add to Home Screen" 3) Tap "Add"',
+        'info',
+        8000
+      );
+    } else {
+      // Fallback for other browsers
+      showToast(
+        'To install this app: Look for "Add to Home Screen" or "Install App" option in your browser menu',
+        'info',
+        6000
+      );
     }
   };
 
@@ -103,7 +177,7 @@ export default function Dashboard({ onPageChange }: DashboardProps) {
       {/* Header */}
       <div className="flex justify-between items-center px-4 py-6">
         <div className="flex items-center gap-2 text-gray-800">
-          <img src="/icons/Logomark.png" alt="NPC Business Card" className="w-6 h-6" />
+          <img src="/icons/nfc_logo.jpg" alt="NPC Business Card" className="w-6 h-6" />
           <span className="font-semibold text-lg">NPC Business Card</span>
         </div>
         <div className="flex items-center gap-3 text-gray-800">
