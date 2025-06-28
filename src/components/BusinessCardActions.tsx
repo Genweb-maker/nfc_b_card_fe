@@ -211,7 +211,7 @@ const BusinessCardActions = ({ profile, className = "" }: BusinessCardActionsPro
             }
         } catch (error) {
             console.error('Share failed:', error);
-            if (error.name !== 'AbortError') { // User cancelled
+            if (error instanceof Error && error.name !== 'AbortError') { // User cancelled
                 setShowShareMenu(true); // Show manual share options
             }
         } finally {

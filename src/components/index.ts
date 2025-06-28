@@ -9,6 +9,5 @@ export { default as Navbar } from './Navbar';
 export { default as ProfilePage } from './ProfilePage';
 export { default as SharePage } from './SharePage';
 export { default as Toast } from './Toast';
-export { default as ToastDemo } from './ToastDemo';
 export { default as PWAInstallPrompt } from './PWAInstallPrompt';
 export { default as SEO } from './SEO'; 

@@ -1,61 +1,5 @@
 import type { NextConfig } from "next";
 
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: false, // Enable PWA in all environments for testing
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'google-fonts-cache',
-        expiration: {
-          maxEntries: 10,
-          maxAgeSeconds: 60 * 60 * 24 * 365, // <== 365 days
-        },
-        cacheKeyWillBeUsed: async ({ request }) => {
-          return `${request.url}?${Math.round(Date.now() / (1000 * 60 * 60 * 24))}`;
-        },
-      },
-    },
-    {
-      urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'gstatic-fonts-cache',
-        expiration: {
-          maxEntries: 10,
-          maxAgeSeconds: 60 * 60 * 24 * 365, // <== 365 days
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-font-assets',
-        expiration: {
-          maxEntries: 4,
-          maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-image-assets',
-        expiration: {
-          maxEntries: 64,
-          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-        },
-      },
-    },
-  ],
-});
-
 const nextConfig: NextConfig = {
   /* config options here */
   // Allow cross-origin requests from local network IPs during development
@@ -71,4 +15,4 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;
